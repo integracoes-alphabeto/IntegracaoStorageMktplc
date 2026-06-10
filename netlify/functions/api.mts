@@ -1,7 +1,5 @@
-import { createRequire } from "node:module";
 import serverless from "serverless-http";
-
-const require = createRequire(import.meta.url);
+import serverModule from "../../src/server.js";
 
 let cachedHandler;
 
@@ -20,7 +18,7 @@ function normalizeRequestUrl(request) {
 
 function getHandler() {
   if (!cachedHandler) {
-    const { createApp } = require("../../src/server.js");
+    const { createApp } = serverModule;
     const app = createApp();
 
     cachedHandler = serverless(app, {
