@@ -22,6 +22,60 @@ Referencias oficiais:
 - Railway: https://docs.railway.com/guides/express
 - Fly.io: https://fly.io/docs/js/
 
+## Plataformas que nao hibernam
+
+Atualizado em 2026-06-10 com base nas documentacoes oficiais consultadas.
+
+### Melhor equilibrio para este projeto
+
+1. **Render pago - Web Service**
+   - O plano gratis hiberna apos 15 minutos sem trafego.
+   - Em instancia paga, essa limitacao do plano gratis deixa de se aplicar.
+   - E uma das opcoes mais simples para conectar GitHub, configurar `npm ci`, `npm start` e variaveis de ambiente.
+
+2. **Railway com Serverless desativado**
+   - O modo Serverless e o recurso que coloca servicos para dormir quando ficam ociosos.
+   - Para nao hibernar, manter o servico como deploy normal, sem Serverless/scale-to-zero.
+   - Tambem e simples para deploy via GitHub e variaveis de ambiente.
+
+3. **DigitalOcean App Platform pago**
+   - O plano gratis e apenas para sites estaticos.
+   - Para este app Express, seria um Web Service pago em container.
+   - Boa opcao quando se quer previsibilidade e menos configuracao de servidor.
+
+### Opcoes mais tecnicas, mas bem estaveis
+
+4. **Fly.io com pelo menos uma Machine sempre ligada**
+   - O Fly tem autostop/autostart opcional.
+   - Para nao hibernar, configurar para manter uma maquina minima rodando ou desativar auto stop.
+   - Melhor quando voce quer mais controle de regiao e infraestrutura.
+
+5. **VPS propria: DigitalOcean Droplet, AWS Lightsail, Hetzner, Linode ou Hostinger VPS**
+   - Nao hiberna por inatividade.
+   - Normalmente e a opcao mais previsivel.
+   - Exige configurar servidor Linux, Node, PM2 ou systemd, Nginx, SSL, firewall e backups.
+
+6. **Northflank**
+   - A pagina de precos informa compute sempre ligado, sem sleeping.
+   - Pode ser uma boa opcao para containers, mas eu validaria custo e simplicidade antes de escolher para este caso.
+
+### Plataformas/modos a evitar se a prioridade for nao hibernar
+
+- **Render Free:** hiberna quando fica sem trafego.
+- **Railway Serverless:** pode dormir e ter cold boot.
+- **Koyeb Scale-to-Zero:** e feito justamente para escalar a zero quando nao ha trafego.
+- **Heroku Eco:** hiberna apos periodo sem trafego; usar Basic ou superior se escolher Heroku.
+
+### Minha escolha recomendada
+
+Para publicar rapido e sem hibernacao, eu escolheria:
+
+1. Render pago, se a prioridade for simplicidade.
+2. DigitalOcean App Platform, se a prioridade for previsibilidade.
+3. VPS, se a prioridade for menor custo fixo e controle total.
+
+Para este projeto, eu comecaria por **Render pago** ou **DigitalOcean App Platform**. A VPS fica excelente depois, mas aumenta a responsabilidade de manutencao.
+
 ## Antes de subir para Git
 
 1. Confirme que `.env`, `node_modules/`, `.DS_Store`, `*.log` e `secrets/` estao ignorados.
