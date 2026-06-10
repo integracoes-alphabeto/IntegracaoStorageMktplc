@@ -68,8 +68,15 @@ function normalizeSingleFolder(value) {
 function parseInlineCredentials() {
   const rawJson = readEnv("GCS_SERVICE_ACCOUNT_JSON");
   const rawBase64 = readEnv("GCS_SERVICE_ACCOUNT_JSON_BASE64");
+  const splitClientEmail = readEnv("GCS_CLIENT_EMAIL");
+  const splitPrivateKeyBase64 = [
+    readEnv("GCS_PRIVATE_KEY_BASE64_PART1"),
+    readEnv("GCS_PRIVATE_KEY_BASE64_PART2"),
+    readEnv("GCS_PRIVATE_KEY_BASE64_PART3"),
+    readEnv("GCS_PRIVATE_KEY_BASE64_PART4"),
+  ].join("");
 
-  if (!rawJson && !rawBase64) {
+  if (!rawJson && !rawBase64 && !(splitClientEmail && splitPrivateKeyBase64)) {
     return { inlineCredentials: null, credentialError: "" };
   }
 
@@ -77,6 +84,19 @@ function parseInlineCredentials() {
     if (rawJson) {
       return {
         inlineCredentials: JSON.parse(rawJson),
+        credentialError: "",
+      };
+    }
+
+    if (splitClientEmail && splitPrivateKeyBase64) {
+      return {
+        inlineCredentials: {
+          type: "service_account",
+          project_id: readEnv("GCS_PROJECT_ID"),
+          client_email: splitClientEmail,
+          private_key: Buffer.from(splitPrivateKeyBase64, "base64").toString("utf8"),
+          token_uri: readEnv("GCS_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+        },
         credentialError: "",
       };
     }

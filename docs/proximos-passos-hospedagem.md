@@ -104,6 +104,7 @@ O projeto agora possui uma primeira adaptacao para Netlify:
 - `serverless-http` e `@netlify/functions` foram adicionados nas dependencias.
 - `src/config.js` passa a preferir `Netlify.env.get(...)` quando estiver rodando em ambiente Netlify.
 - Para variaveis secretas, `src/config.js` volta para `process.env` quando `Netlify.env.get(...)` retornar vazio.
+- Para Netlify, `src/config.js` tambem aceita credencial GCS dividida em `GCS_CLIENT_EMAIL` e `GCS_PRIVATE_KEY_BASE64_PART1` a `PART4`, evitando uma variavel unica grande com o JSON completo.
 
 Configuracao esperada no Netlify:
 
@@ -121,6 +122,12 @@ APP_BASIC_AUTH_PASSWORD=preencher
 GCS_BUCKET_NAME=mktplacealpha
 GCS_PROJECT_ID=flowing-flame-322416
 GCS_SERVICE_ACCOUNT_JSON_BASE64=preencher
+GCS_CLIENT_EMAIL=opcional_para_netlify
+GCS_PRIVATE_KEY_BASE64_PART1=opcional_para_netlify
+GCS_PRIVATE_KEY_BASE64_PART2=opcional_para_netlify
+GCS_PRIVATE_KEY_BASE64_PART3=opcional_para_netlify
+GCS_PRIVATE_KEY_BASE64_PART4=opcional_para_netlify
+GCS_TOKEN_URI=https://oauth2.googleapis.com/token
 GCS_URL_MODE=public
 GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/mktplacealpha
 GCS_MAKE_PUBLIC=false
