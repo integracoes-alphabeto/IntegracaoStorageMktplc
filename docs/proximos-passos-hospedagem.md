@@ -139,6 +139,14 @@ Validacao do deploy Netlify:
 - A Function foi corrigida para importar o servidor Express via ESM.
 - Em seguida, a API respondeu, mas `authEnabled` e `vtexEnabled` ficaram falsos porque variaveis secretas podem chegar vazias via `Netlify.env.get(...)`.
 - O helper de ambiente foi ajustado para usar `process.env` como fallback quando isso acontecer.
+- O deploy publicado em `https://integracao-storage-mktplc.netlify.app` respondeu `200` na pagina principal, `200` em `/api/health`, `401` em `/api/config` sem senha, `200` em `/api/config` com senha, `authEnabled: true`, `vtexEnabled: true` e listou 8 pastas do bucket.
+- A tentativa de gravar `GCS_SERVICE_ACCOUNT_JSON_BASE64` como variavel normal quebrou o build da Netlify; a variavel foi removida para recuperar o deploy.
+- Com a publicacao atual, `credentialMode` aparece como `application-default`. A listagem de pastas funciona, mas o teste de upload pequeno retornou erro de socket ao chamar o endpoint de upload do Google Storage. Antes de usar em producao para envio de imagens, ajustar a credencial GCS no painel da Netlify ou escolher um host Node persistente.
+
+Credenciais e acesso:
+
+- O usuario inicial de Basic Auth foi gravado no `.env` local ignorado pelo Git e tambem nas variaveis do projeto Netlify.
+- Nao registrar senhas, tokens VTEX nem service account em arquivos versionados.
 
 ### Minha escolha recomendada
 
