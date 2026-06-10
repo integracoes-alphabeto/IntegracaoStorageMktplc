@@ -66,6 +66,32 @@ Atualizado em 2026-06-10 com base nas documentacoes oficiais consultadas.
 - **Koyeb Scale-to-Zero:** e feito justamente para escalar a zero quando nao ha trafego.
 - **Heroku Eco:** hiberna apos periodo sem trafego; usar Basic ou superior se escolher Heroku.
 
+### Sobre Netlify
+
+Da para hospedar parte deste projeto na Netlify, mas nao no mesmo modelo atual de servidor Express sempre rodando.
+
+A Netlify suporta Express usando **Netlify Functions**. Nesse modelo, o app Express vira uma funcao serverless chamada sob demanda, com redirects do `netlify.toml` apontando `/api/*` para a funcao. A propria documentacao da Netlify alerta que, ao rodar Express assim, passam a valer os limites de Functions, incluindo limites de execucao e memoria.
+
+Para este projeto especifico, existem tres pontos de atencao:
+
+1. O upload usa `multer.memoryStorage()`, entao os arquivos entram na memoria da funcao.
+2. O processamento usa `sharp`, que consome CPU/memoria e pode sofrer em lotes grandes.
+3. O progresso de tarefas fica em memoria no `src/services/tasks.js`; em ambiente serverless, uma chamada de upload e outra chamada de consulta em `/api/tasks/:taskId` podem cair em instancias diferentes ou em execucoes separadas.
+
+Conclusao: **Netlify e possivel, mas exige adaptacao**. Eu nao recomendaria como primeira opcao para manter o fluxo atual de upload em lote e progresso em tela.
+
+Se quisermos usar Netlify mesmo assim, o caminho mais seguro seria:
+
+1. Hospedar o frontend estatico (`public/`) na Netlify.
+2. Manter a API de upload em Render, Railway, DigitalOcean App Platform ou VPS.
+3. Ou refatorar o backend para Netlify Functions, reduzindo tamanho/lote de upload e trocando o progresso em memoria por armazenamento externo, como banco, fila ou Netlify Blobs.
+
+Referencias oficiais:
+
+- Express on Netlify: https://docs.netlify.com/build/frameworks/framework-setup-guides/express/
+- Netlify Functions overview: https://docs.netlify.com/build/functions/overview/
+- Netlify Functions configuration: https://docs.netlify.com/build/functions/configuration/
+
 ### Minha escolha recomendada
 
 Para publicar rapido e sem hibernacao, eu escolheria:
