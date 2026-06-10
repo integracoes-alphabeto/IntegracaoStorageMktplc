@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bucket Image Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Fluxo Guiado Para Marketplace</span>
+          <h1>Uma jornada clara para organizar, comprimir e publicar imagens sem pular etapas.</h1>
+          <p>
+            Escolha a pasta, valide a compressao, envie imagens ou importe fotos por SKU da VTEX e exporte o CSV no
+            final com tudo pronto para o seu painel.
+          </p>
+        </div>
+
+        <div class="hero-card">
+          <div class="status-pill" id="config-status">Carregando configuracao...</div>
+
+          <dl class="hero-meta">
+            <div>
+              <dt>Bucket</dt>
+              <dd id="bucket-name">-</dd>
+            </div>
+            <div>
+              <dt>Pasta padrao</dt>
+              <dd id="default-prefix">-</dd>
+            </div>
+            <div>
+              <dt>Modo de URL</dt>
+              <dd id="url-mode">-</dd>
+            </div>
+          </dl>
+        </div>
+      </header>
+
+      <div class="workspace-grid">
+        <aside class="journey-rail">
+          <section class="journey-card journey-overview">
+            <span class="eyebrow secondary">Jornada Atual</span>
+            <strong id="flow-headline">Carregando o painel...</strong>
+            <p id="flow-subcopy">Assim que a configuracao entrar, eu monto a proxima etapa para voce.</p>
+            <button class="button button-primary" id="journey-next-button" type="button">
+              <span id="next-step-label">Aguarde</span>
+            </button>
+          </section>
+
+          <section class="journey-card">
+            <div class="journey-steps">
+              <button class="journey-step" type="button" data-step-key="folder" data-step-target="step-folder">
+                <span class="journey-step-index">1</span>
+                <span class="journey-step-copy">
+                  <strong>Pasta</strong>
+                  <small>Defina a base do envio</small>
+                </span>
+                <span class="journey-step-state" data-step-state-label="folder">Pendente</span>
+              </button>
+
+              <button class="journey-step" type="button" data-step-key="compression" data-step-target="step-compression">
+                <span class="journey-step-index">2</span>
+                <span class="journey-step-copy">
+                  <strong>Compressao</strong>
+                  <small>Qualidade e largura maxima</small>
+                </span>
+                <span class="journey-step-state" data-step-state-label="compression">Liberado</span>
+              </button>
+
+              <button class="journey-step" type="button" data-step-key="source" data-step-target="step-source">
+                <span class="journey-step-index">3</span>
+                <span class="journey-step-copy">
+                  <strong>Origem</strong>
+                  <small>Upload local ou VTEX por SKU</small>
+                </span>
+                <span class="journey-step-state" data-step-state-label="source">Liberado</span>
+              </button>
+
+              <button class="journey-step" type="button" data-step-key="review" data-step-target="step-review">
+                <span class="journey-step-index">4</span>
+                <span class="journey-step-copy">
+                  <strong>Revisao</strong>
+                  <small>Conferir links e exportar</small>
+                </span>
+                <span class="journey-step-state" data-step-state-label="review">Liberado</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="journey-card snapshot-card">
+            <div class="snapshot-grid">
+              <div class="snapshot-item">
+                <span>Pasta ativa</span>
+                <strong id="active-folder-badge">-</strong>
+              </div>
+              <div class="snapshot-item">
+                <span>Compressao</span>
+                <strong id="compression-summary-badge">Aguardando</strong>
+              </div>
+              <div class="snapshot-item">
+                <span>Origem em foco</span>
+                <strong id="source-summary-badge">Upload manual</strong>
+              </div>
+              <div class="snapshot-item">
+                <span>Arquivos atuais</span>
+                <strong id="files-summary-badge">0 imagens</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="journey-card notice-card">
+            <div class="notice-card-head">
+              <h2>Mensagens</h2>
+              <p>Alertas do bucket, progresso e o que falta fazer.</p>
+            </div>
+            <div class="message-stack">
+              <div class="info-box" id="config-messages"></div>
+              <div class="info-box subtle" id="result-message">Pronto para receber imagens.</div>
+            </div>
+          </section>
+        </aside>
+
+        <main class="workflow-stack">
+          <section class="step-card" id="step-folder" data-step-card="folder">
+            <div class="step-header">
+              <div>
+                <span class="step-kicker">Etapa 1</span>
+                <h2>Defina a pasta do bucket</h2>
+                <p>Escolha a pasta ativa ou crie uma nova na raiz. O fluxo agora trabalha apenas com pasta simples.</p>
+              </div>
+              <span class="step-chip">Obrigatorio</span>
+            </div>
+
+            <div class="field-grid folder-grid">
+              <label class="field">
+                <span>Pasta ativa</span>
+                <input id="prefix-input" name="prefix" type="text" placeholder="ex.: produtos" autocomplete="off" />
+                <small class="field-help">Use so um nome simples, sem barras ou subpastas.</small>
+              </label>
+
+              <label class="field">
+                <span>Nova pasta</span>
+                <input id="new-folder-input" name="new-folder" type="text" placeholder="ex.: inverno2026" autocomplete="off" />
+                <small class="field-help">A nova pasta sempre sera criada direto na raiz do bucket.</small>
+              </label>
+
+              <div class="field readonly">
+                <span>Resumo de exportacao</span>
+                <div class="value-box" id="summary-badge">0 arquivos carregados</div>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="button button-primary" id="refresh-button" type="button">Sincronizar pasta</button>
+              <button class="button" id="create-folder-button" type="button">Criar pasta</button>
+            </div>
+
+            <div class="progress-card" id="controls-progress-card" hidden>
+              <div class="progress-head">
+                <strong id="controls-progress-label">Processando...</strong>
+                <span id="controls-progress-value">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="controls-progress-fill"></div>
+              </div>
+              <small id="controls-progress-detail">Aguardando.</small>
+            </div>
+
+            <section class="folder-browser">
+              <div class="section-head">
+                <div>
+                  <h3>Pastas encontradas</h3>
+                  <p id="folders-count">0 pastas no bucket</p>
+                </div>
+                <button class="button button-ghost button-small" id="reload-folders-button" type="button">
+                  Atualizar lista
+                </button>
+              </div>
+
+              <div class="folder-list" id="folder-list">
+                <div class="folder-empty">As pastas serao exibidas aqui assim que a conexao com o bucket estiver pronta.</div>
+              </div>
+            </section>
+          </section>
+
+          <section class="step-card" id="step-compression" data-step-card="compression">
+            <div class="step-header">
+              <div>
+                <span class="step-kicker">Etapa 2</span>
+                <h2>Revise a compressao antes do envio</h2>
+                <p>Defina a qualidade e a largura maxima. A altura sempre e recalculada proporcionalmente.</p>
+              </div>
+              <span class="step-chip muted">Configuracao</span>
+            </div>
+
+            <div class="compression-panel">
+              <div class="compression-grid">
+                <label class="toggle-field">
+                  <input id="compression-enabled-input" type="checkbox" checked />
+                  <span>Ativar compressao antes do storage</span>
+                </label>
+
+                <label class="field">
+                  <span>Qualidade</span>
+                  <input id="compression-quality-input" type="number" min="1" max="100" step="1" placeholder="82" />
+                  <small class="field-help">Quanto menor, mais leve fica o arquivo final.</small>
+                </label>
+
+                <label class="field">
+                  <span>Largura maxima (px)</span>
+                  <input id="compression-max-width-input" type="number" min="0" max="10000" step="10" placeholder="1600" />
+                  <small class="field-help">Use `0` para manter a largura original.</small>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="step-card" id="step-source" data-step-card="source">
+            <div class="step-header">
+              <div>
+                <span class="step-kicker">Etapa 3</span>
+                <h2>Escolha de onde as imagens vao sair</h2>
+                <p>Voce pode fazer upload do computador ou baixar as fotos da VTEX, comprimir e subir no storage.</p>
+              </div>
+              <span class="step-chip">Execucao</span>
+            </div>
+
+            <div class="source-tabs">
+              <button class="source-tab" id="source-tab-upload" type="button" data-source-mode="upload">Upload manual</button>
+              <button class="source-tab" id="source-tab-vtex" type="button" data-source-mode="vtex">
+                Importar VTEX
+              </button>
+            </div>
+
+            <div class="source-panel" id="source-panel-upload">
+              <label class="dropzone" id="dropzone">
+                <input id="file-input" type="file" accept="image/*" multiple />
+                <span class="dropzone-title">Arraste as imagens para ca</span>
+                <span class="dropzone-copy">ou clique para escolher os arquivos no computador</span>
+              </label>
+
+              <div class="upload-footer">
+                <div class="selected-files" id="selected-files">Nenhum arquivo selecionado.</div>
+                <button class="button button-primary" id="upload-button" type="button" disabled>Enviar imagens</button>
+              </div>
+
+              <div class="progress-card" id="upload-progress-card" hidden>
+                <div class="progress-head">
+                  <strong id="upload-progress-label">Preparando upload...</strong>
+                  <span id="upload-progress-value">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" id="upload-progress-fill"></div>
+                </div>
+                <small id="upload-progress-detail">Aguardando.</small>
+              </div>
+
+              <ul class="pending-list" id="pending-list"></ul>
+            </div>
+
+            <div class="source-panel" id="source-panel-vtex" hidden>
+              <label class="field vtex-field">
+                <span>SKUs</span>
+                <textarea
+                  id="vtex-skus-input"
+                  rows="7"
+                  placeholder="Cole um SKU por linha, ou separe por virgula."
+                ></textarea>
+                <small class="field-help">
+                  As imagens serao baixadas da VTEX, processadas e publicadas no bucket selecionado.
+                </small>
+              </label>
+
+              <div class="button-row">
+                <button class="button button-primary" id="vtex-search-button" type="button">
+                  Importar fotos da VTEX
+                </button>
+              </div>
+
+              <div class="progress-card" id="vtex-progress-card" hidden>
+                <div class="progress-head">
+                  <strong id="vtex-progress-label">Preparando importacao...</strong>
+                  <span id="vtex-progress-value">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" id="vtex-progress-fill"></div>
+                </div>
+                <small id="vtex-progress-detail">Aguardando.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="step-card" id="step-review" data-step-card="review">
+            <div class="step-header">
+              <div>
+                <span class="step-kicker">Etapa 4</span>
+                <h2>Revise os links e exporte o CSV</h2>
+                <p>A exportacao agrupa uma linha por SKU e cria uma coluna para cada foto publicada no storage.</p>
+              </div>
+              <span class="step-chip success">Saida final</span>
+            </div>
+
+            <div class="review-toolbar">
+              <div class="review-summary">
+                <div class="summary-pill" id="table-stats">0 imagens</div>
+                <p>Confira os links abaixo antes de baixar o CSV final.</p>
+              </div>
+
+              <div class="button-row review-actions">
+                <button class="button button-primary" id="export-button" type="button" disabled>
+                  Exportar CSV
+                </button>
+                <a class="button button-ghost" id="server-export-link" href="#" download>
+                  CSV do bucket
+                </a>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Preview</th>
+                    <th>Arquivo</th>
+                    <th>SKU</th>
+                    <th>Ordem</th>
+                    <th>URL</th>
+                  </tr>
+                </thead>
+                <tbody id="files-table-body">
+                  <tr>
+                    <td colspan="5" class="empty-state">
+                      Assim que voce enviar imagens ou importar fotos da VTEX, os links aparecem aqui.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

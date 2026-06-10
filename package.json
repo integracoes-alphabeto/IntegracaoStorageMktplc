@@ -1,0 +1,26 @@
+{
+  "name": "storagemarketplace",
+  "version": "1.0.0",
+  "description": "Painel local para enviar imagens ao Google Cloud Storage e exportar links para marketplace",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "google-cloud-storage",
+    "upload",
+    "csv",
+    "marketplace"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "sharp": "^0.34.5"
+  }
+}
