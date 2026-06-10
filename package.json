@@ -4,6 +4,7 @@
   "description": "Painel local para enviar imagens ao Google Cloud Storage e exportar links para marketplace",
   "main": "src/server.js",
   "scripts": {
+    "build": "node -e \"console.log('No frontend build step required for Netlify')\"",
     "dev": "node src/server.js",
     "start": "node src/server.js"
   },
@@ -21,6 +22,10 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "multer": "^2.1.1",
+    "serverless-http": "^4.0.0",
     "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^5.3.0"
   }
 }

@@ -3,6 +3,18 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+function readEnv(name, fallback = "") {
+  const netlifyEnv = globalThis.Netlify?.env;
+  const netlifyValue =
+    typeof netlifyEnv?.get === "function" ? netlifyEnv.get(name) : undefined;
+
+  if (netlifyValue !== undefined && netlifyValue !== null) {
+    return netlifyValue;
+  }
+
+  return process.env[name] ?? fallback;
+}
+
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === "") {
     return fallback;
@@ -54,8 +66,8 @@ function normalizeSingleFolder(value) {
 }
 
 function parseInlineCredentials() {
-  const rawJson = process.env.GCS_SERVICE_ACCOUNT_JSON;
-  const rawBase64 = process.env.GCS_SERVICE_ACCOUNT_JSON_BASE64;
+  const rawJson = readEnv("GCS_SERVICE_ACCOUNT_JSON");
+  const rawBase64 = readEnv("GCS_SERVICE_ACCOUNT_JSON_BASE64");
 
   if (!rawJson && !rawBase64) {
     return { inlineCredentials: null, credentialError: "" };
@@ -85,37 +97,37 @@ function parseInlineCredentials() {
 }
 
 const { inlineCredentials, credentialError } = parseInlineCredentials();
-const basicAuthUser = String(process.env.APP_BASIC_AUTH_USER || "").trim();
-const basicAuthPassword = String(process.env.APP_BASIC_AUTH_PASSWORD || "");
-const bucketName = String(process.env.GCS_BUCKET_NAME || "").trim();
-const projectId = String(process.env.GCS_PROJECT_ID || "").trim();
+const basicAuthUser = String(readEnv("APP_BASIC_AUTH_USER")).trim();
+const basicAuthPassword = String(readEnv("APP_BASIC_AUTH_PASSWORD"));
+const bucketName = String(readEnv("GCS_BUCKET_NAME")).trim();
+const projectId = String(readEnv("GCS_PROJECT_ID")).trim();
 const credentialsFile = String(
-  process.env.GCS_CREDENTIALS_FILE || process.env.GOOGLE_APPLICATION_CREDENTIALS || ""
+  readEnv("GCS_CREDENTIALS_FILE") || readEnv("GOOGLE_APPLICATION_CREDENTIALS")
 ).trim();
-const defaultPrefix = normalizeSingleFolder(process.env.GCS_DEFAULT_PREFIX || "produtos");
-const urlMode = String(process.env.GCS_URL_MODE || "public").toLowerCase() === "signed" ? "signed" : "public";
-const signedUrlDays = Math.max(parseNumber(process.env.GCS_SIGNED_URL_DAYS, 7), 1);
-const maxFilesPerUpload = Math.max(parseNumber(process.env.MAX_FILES_PER_UPLOAD, 100), 1);
-const maxFileSizeMb = Math.max(parseNumber(process.env.MAX_FILE_SIZE_MB, 20), 1);
+const defaultPrefix = normalizeSingleFolder(readEnv("GCS_DEFAULT_PREFIX", "produtos"));
+const urlMode = String(readEnv("GCS_URL_MODE", "public")).toLowerCase() === "signed" ? "signed" : "public";
+const signedUrlDays = Math.max(parseNumber(readEnv("GCS_SIGNED_URL_DAYS", 7), 7), 1);
+const maxFilesPerUpload = Math.max(parseNumber(readEnv("MAX_FILES_PER_UPLOAD", 100), 100), 1);
+const maxFileSizeMb = Math.max(parseNumber(readEnv("MAX_FILE_SIZE_MB", 20), 20), 1);
 const uploadConcurrency = Math.min(
-  Math.max(parseNumber(process.env.UPLOAD_CONCURRENCY || process.env.STORAGE_UPLOAD_CONCURRENCY, 4), 1),
+  Math.max(parseNumber(readEnv("UPLOAD_CONCURRENCY") || readEnv("STORAGE_UPLOAD_CONCURRENCY"), 4), 1),
   12
 );
-const imageCompressionEnabled = parseBoolean(process.env.IMAGE_COMPRESSION_ENABLED, true);
-const imageQuality = Math.min(Math.max(parseNumber(process.env.IMAGE_QUALITY, 82), 1), 100);
-const imageMaxWidth = Math.max(parseNumber(process.env.IMAGE_MAX_WIDTH, 1600), 0);
-const vtexAccountName = String(process.env.VTEX_ACCOUNT_NAME || process.env.VTEX_ACCOUNT || "alphabeto").trim();
+const imageCompressionEnabled = parseBoolean(readEnv("IMAGE_COMPRESSION_ENABLED"), true);
+const imageQuality = Math.min(Math.max(parseNumber(readEnv("IMAGE_QUALITY"), 82), 1), 100);
+const imageMaxWidth = Math.max(parseNumber(readEnv("IMAGE_MAX_WIDTH"), 1600), 0);
+const vtexAccountName = String(readEnv("VTEX_ACCOUNT_NAME") || readEnv("VTEX_ACCOUNT") || "alphabeto").trim();
 const vtexApiBaseUrl = String(
-  process.env.VTEX_API_BASE_URL ||
+  readEnv("VTEX_API_BASE_URL") ||
     (vtexAccountName ? `https://${vtexAccountName}.vtexcommercestable.com.br` : "")
 )
   .trim()
   .replace(/\/+$/, "");
-const vtexApiAppKey = String(process.env.VTEX_API_APP_KEY || "").trim();
-const vtexApiAppToken = String(process.env.VTEX_API_APP_TOKEN || "").trim();
-const vtexMaxSkus = Math.max(parseNumber(process.env.VTEX_MAX_EXPORT_SKUS, 2500), 1);
+const vtexApiAppKey = String(readEnv("VTEX_API_APP_KEY")).trim();
+const vtexApiAppToken = String(readEnv("VTEX_API_APP_TOKEN")).trim();
+const vtexMaxSkus = Math.max(parseNumber(readEnv("VTEX_MAX_EXPORT_SKUS"), 2500), 1);
 const vtexRequestConcurrency = Math.min(
-  Math.max(parseNumber(process.env.VTEX_REQUEST_CONCURRENCY, 6), 1),
+  Math.max(parseNumber(readEnv("VTEX_REQUEST_CONCURRENCY"), 6), 1),
   20
 );
 
@@ -127,7 +139,7 @@ if (!bucketName) {
 
 const warnings = [];
 
-if (urlMode === "public" && !parseBoolean(process.env.GCS_MAKE_PUBLIC, false)) {
+if (urlMode === "public" && !parseBoolean(readEnv("GCS_MAKE_PUBLIC"), false)) {
   warnings.push(
     "Os links publicos so funcionam se o bucket ou os objetos tiverem permissao de leitura publica."
   );
@@ -158,7 +170,7 @@ if (!basicAuthUser || !basicAuthPassword) {
 }
 
 const appConfig = {
-  port: parseNumber(process.env.PORT, 3000),
+  port: parseNumber(readEnv("PORT"), 3000),
   auth: {
     basicEnabled: Boolean(basicAuthUser && basicAuthPassword),
     user: basicAuthUser,
@@ -170,9 +182,9 @@ const appConfig = {
   inlineCredentials,
   credentialError,
   credentialMode: credentialsFile ? "file" : inlineCredentials ? "inline" : "application-default",
-  publicBaseUrl: String(process.env.GCS_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, ""),
+  publicBaseUrl: String(readEnv("GCS_PUBLIC_BASE_URL")).trim().replace(/\/+$/, ""),
   urlMode,
-  makePublic: parseBoolean(process.env.GCS_MAKE_PUBLIC, false),
+  makePublic: parseBoolean(readEnv("GCS_MAKE_PUBLIC"), false),
   signedUrlDays,
   defaultPrefix,
   maxFilesPerUpload,

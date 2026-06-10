@@ -1,0 +1,25 @@
+[build]
+  command = "npm run build"
+  publish = "public"
+
+[functions]
+  included_files = ["src/**"]
+  node_bundler = "esbuild"
+  external_node_modules = [
+    "@google-cloud/storage",
+    "express",
+    "multer",
+    "serverless-http",
+    "sharp"
+  ]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

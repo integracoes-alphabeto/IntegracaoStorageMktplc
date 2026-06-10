@@ -92,6 +92,46 @@ Referencias oficiais:
 - Netlify Functions overview: https://docs.netlify.com/build/functions/overview/
 - Netlify Functions configuration: https://docs.netlify.com/build/functions/configuration/
 
+#### Adaptacao implementada para Netlify
+
+Atualizado em 2026-06-10.
+
+O projeto agora possui uma primeira adaptacao para Netlify:
+
+- `netlify.toml` publica `public/` como site estatico.
+- `/api/*` e redirecionado para `netlify/functions/api.mts`.
+- `netlify/functions/api.mts` empacota o Express atual com `serverless-http`.
+- `serverless-http` e `@netlify/functions` foram adicionados nas dependencias.
+- `src/config.js` passa a preferir `Netlify.env.get(...)` quando estiver rodando em ambiente Netlify.
+
+Configuracao esperada no Netlify:
+
+```text
+Build command: npm run build
+Publish directory: public
+Functions directory: netlify/functions
+```
+
+Variaveis obrigatorias no Netlify:
+
+```env
+APP_BASIC_AUTH_USER=preencher
+APP_BASIC_AUTH_PASSWORD=preencher
+GCS_BUCKET_NAME=mktplacealpha
+GCS_PROJECT_ID=flowing-flame-322416
+GCS_SERVICE_ACCOUNT_JSON_BASE64=preencher
+GCS_URL_MODE=public
+GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/mktplacealpha
+GCS_MAKE_PUBLIC=false
+GCS_DEFAULT_PREFIX=produtos
+VTEX_ACCOUNT_NAME=alphabeto
+VTEX_API_BASE_URL=https://alphabeto.vtexcommercestable.com.br
+VTEX_API_APP_KEY=preencher
+VTEX_API_APP_TOKEN=preencher
+```
+
+Observacao importante: esta adaptacao permite publicar e testar na Netlify, mas uploads grandes continuam sujeitos aos limites de Functions. Se a operacao real envolver muitos arquivos por lote, manter API em servidor Node sempre ligado continua sendo o caminho mais robusto.
+
 ### Minha escolha recomendada
 
 Para publicar rapido e sem hibernacao, eu escolheria:
