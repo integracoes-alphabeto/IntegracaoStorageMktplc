@@ -29,6 +29,22 @@ function parseNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function parseOptionalPositiveInteger(value) {
+  const rawValue = String(value ?? "").trim().toLowerCase();
+
+  if (!rawValue || ["0", "false", "no", "none", "unlimited", "sem-limite"].includes(rawValue)) {
+    return null;
+  }
+
+  const parsed = Number(rawValue);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.floor(parsed);
+}
+
 function normalizeSegment(value) {
   return String(value)
     .trim()
@@ -145,7 +161,7 @@ const vtexApiBaseUrl = String(
   .replace(/\/+$/, "");
 const vtexApiAppKey = String(readEnv("VTEX_API_APP_KEY")).trim();
 const vtexApiAppToken = String(readEnv("VTEX_API_APP_TOKEN")).trim();
-const vtexMaxSkus = Math.max(parseNumber(readEnv("VTEX_MAX_EXPORT_SKUS"), 2500), 1);
+const vtexMaxSkus = parseOptionalPositiveInteger(readEnv("VTEX_MAX_EXPORT_SKUS"));
 const vtexRequestConcurrency = Math.min(
   Math.max(parseNumber(readEnv("VTEX_REQUEST_CONCURRENCY"), 6), 1),
   20

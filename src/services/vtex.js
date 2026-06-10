@@ -294,7 +294,7 @@ async function fetchVtexSkuImages({
     );
   }
 
-  if (skus.length > appConfig.vtex.maxSkus) {
+  if (appConfig.vtex.maxSkus && skus.length > appConfig.vtex.maxSkus) {
     throw new Error(
       `A lista tem ${skus.length} SKUs. O limite atual é ${appConfig.vtex.maxSkus}; ajuste VTEX_MAX_EXPORT_SKUS no .env se precisar.`
     );

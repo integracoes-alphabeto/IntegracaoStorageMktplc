@@ -225,7 +225,7 @@ VTEX_ACCOUNT_NAME=alphabeto
 VTEX_API_BASE_URL=https://alphabeto.vtexcommercestable.com.br
 VTEX_API_APP_KEY=preencher
 VTEX_API_APP_TOKEN=preencher
-VTEX_MAX_EXPORT_SKUS=2500
+VTEX_MAX_EXPORT_SKUS=
 VTEX_REQUEST_CONCURRENCY=6
 ```
 
@@ -270,3 +270,4 @@ Start Command: npm start
 - Avaliar limite real de upload da plataforma escolhida, principalmente com `MAX_FILES_PER_UPLOAD=10000`.
 - Criar um dominio proprio depois que o deploy inicial estiver validado.
 - Criar rotina de backup/rotacao da chave do Google Cloud se a chave atual ja tiver sido compartilhada fora do ambiente seguro.
+- `VTEX_MAX_EXPORT_SKUS` vazio significa sem limite artificial de SKUs no app; use um numero positivo apenas se quiser rodar um piloto limitado.
