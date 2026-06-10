@@ -12,12 +12,91 @@ const IMAGE_TYPE_EXTENSIONS = {
   "image/tiff": ".tiff",
 };
 
+const RETRYABLE_FETCH_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "ECONNABORTED",
+  "ECONNRESET",
+  "EPIPE",
+  "ETIMEDOUT",
+  "ENETDOWN",
+  "ENETRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ESOCKETTIMEDOUT",
+]);
+
+const RETRYABLE_FETCH_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
 function ensureVtexConfigured() {
   if (!appConfig.vtex.enabled) {
     throw new Error(
       "Preencha VTEX_API_APP_KEY e VTEX_API_APP_TOKEN no .env para importar fotos por SKU da VTEX."
     );
   }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isRetryableFetchError(error) {
+  const code = String(error?.code || error?.cause?.code || "").toUpperCase();
+
+  if (RETRYABLE_FETCH_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = String(error?.message || "").toLowerCase();
+
+  return [
+    "econnreset",
+    "epipe",
+    "etimedout",
+    "enotfound",
+    "socket hang up",
+    "socket connection timeout",
+    "network timeout",
+    "network error",
+    "read timed out",
+    "write epipe",
+  ].some((fragment) => message.includes(fragment));
+}
+
+function getFetchRetryDelayMs(attempt) {
+  const baseDelayMs = 750;
+  const maxDelayMs = 8000;
+  const exponentialDelay = baseDelayMs * 2 ** Math.max(attempt - 1, 0);
+  const jitter = Math.floor(Math.random() * 250);
+
+  return Math.min(exponentialDelay + jitter, maxDelayMs);
+}
+
+async function fetchWithRetry(url, options, retryOptions = {}) {
+  const maxAttempts = Math.max(1, (Number(appConfig.vtex.requestRetryLimit) || 0) + 1);
+  let attempt = 1;
+
+  while (attempt <= maxAttempts) {
+    try {
+      const response = await fetch(url, options);
+
+      if (!RETRYABLE_FETCH_STATUS_CODES.has(response.status) || attempt >= maxAttempts) {
+        return response;
+      }
+    } catch (error) {
+      if (attempt >= maxAttempts || !isRetryableFetchError(error)) {
+        throw error;
+      }
+
+      retryOptions.onRetry?.(error, attempt + 1, maxAttempts);
+    }
+
+    await wait(getFetchRetryDelayMs(attempt));
+    attempt += 1;
+  }
+
+  return fetch(url, options);
 }
 
 function parseSkusText(skusText) {
@@ -208,15 +287,19 @@ function buildSkuFilesUrl(sku) {
 }
 
 async function fetchSkuFiles(sku) {
-  const response = await fetch(buildSkuFilesUrl(sku), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-VTEX-API-AppKey": appConfig.vtex.appKey,
-      "X-VTEX-API-AppToken": appConfig.vtex.appToken,
+  const response = await fetchWithRetry(
+    buildSkuFilesUrl(sku),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-VTEX-API-AppKey": appConfig.vtex.appKey,
+        "X-VTEX-API-AppToken": appConfig.vtex.appToken,
+      },
     },
-  });
+    {}
+  );
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
@@ -396,12 +479,16 @@ async function fetchVtexSkuImages({
 }
 
 async function downloadVtexImage(file) {
-  const response = await fetch(file.url, {
-    method: "GET",
-    headers: {
-      Accept: "image/*",
+  const response = await fetchWithRetry(
+    file.url,
+    {
+      method: "GET",
+      headers: {
+        Accept: "image/*",
+      },
     },
-  });
+    {}
+  );
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);

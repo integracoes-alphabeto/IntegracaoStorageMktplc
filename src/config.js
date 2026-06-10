@@ -1,7 +1,7 @@
 const path = require("path");
 const dotenv = require("dotenv");
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 function readEnv(name, fallback = "") {
   const netlifyEnv = globalThis.Netlify?.env;
@@ -43,6 +43,16 @@ function parseOptionalPositiveInteger(value) {
   }
 
   return Math.floor(parsed);
+}
+
+function parseTimeoutMs(value, fallback) {
+  const rawValue = String(value ?? "").trim().toLowerCase();
+
+  if (!rawValue || ["0", "false", "no", "none", "unlimited", "sem-limite"].includes(rawValue)) {
+    return 0;
+  }
+
+  return Math.max(parseNumber(rawValue, fallback), 0);
 }
 
 function normalizeSegment(value) {
@@ -149,6 +159,12 @@ const uploadConcurrency = Math.min(
   Math.max(parseNumber(readEnv("UPLOAD_CONCURRENCY") || readEnv("STORAGE_UPLOAD_CONCURRENCY"), 4), 1),
   12
 );
+const uploadTimeoutMs = parseTimeoutMs(readEnv("GCS_UPLOAD_TIMEOUT_MS"), 0);
+const uploadRetryLimit = Math.min(
+  Math.max(parseNumber(readEnv("GCS_UPLOAD_RETRY_LIMIT"), 5), 0),
+  12
+);
+const resumableUploadMinMb = Math.max(parseNumber(readEnv("GCS_RESUMABLE_UPLOAD_MIN_MB"), 0), 0);
 const imageCompressionEnabled = parseBoolean(readEnv("IMAGE_COMPRESSION_ENABLED"), true);
 const imageQuality = Math.min(Math.max(parseNumber(readEnv("IMAGE_QUALITY"), 82), 1), 100);
 const imageMaxWidth = Math.max(parseNumber(readEnv("IMAGE_MAX_WIDTH"), 1600), 0);
@@ -165,6 +181,10 @@ const vtexMaxSkus = parseOptionalPositiveInteger(readEnv("VTEX_MAX_EXPORT_SKUS")
 const vtexRequestConcurrency = Math.min(
   Math.max(parseNumber(readEnv("VTEX_REQUEST_CONCURRENCY"), 6), 1),
   20
+);
+const vtexRequestRetryLimit = Math.min(
+  Math.max(parseNumber(readEnv("VTEX_REQUEST_RETRY_LIMIT"), 3), 0),
+  10
 );
 
 const missing = [];
@@ -226,6 +246,9 @@ const appConfig = {
   maxFilesPerUpload,
   maxFileSizeMb,
   uploadConcurrency,
+  uploadTimeoutMs,
+  uploadRetryLimit,
+  resumableUploadMinBytes: Math.round(resumableUploadMinMb * 1024 * 1024),
   imageCompression: {
     enabled: imageCompressionEnabled,
     quality: imageQuality,
@@ -239,6 +262,7 @@ const appConfig = {
     appToken: vtexApiAppToken,
     maxSkus: vtexMaxSkus,
     requestConcurrency: vtexRequestConcurrency,
+    requestRetryLimit: vtexRequestRetryLimit,
   },
   missing,
   warnings,

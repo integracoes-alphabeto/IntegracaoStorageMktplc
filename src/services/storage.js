@@ -7,6 +7,21 @@ const { compressImageEntry, normalizeCompressionOptions } = require("./image-pro
 
 let storageClient;
 
+const RETRYABLE_UPLOAD_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "ECONNABORTED",
+  "ECONNRESET",
+  "EPIPE",
+  "ETIMEDOUT",
+  "ENETDOWN",
+  "ENETRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ESOCKETTIMEDOUT",
+]);
+
+const RETRYABLE_UPLOAD_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
 function getStorageOptions() {
   const options = {};
 
@@ -21,6 +36,8 @@ function getStorageOptions() {
   if (appConfig.inlineCredentials) {
     options.credentials = appConfig.inlineCredentials;
   }
+
+  options.timeout = appConfig.uploadTimeoutMs;
 
   return options;
 }
@@ -166,6 +183,99 @@ function computeProgressPercent(completedSteps, totalSteps) {
   return Math.round((completedSteps / totalSteps) * 100);
 }
 
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getErrorStatusCode(error) {
+  const candidates = [error?.code, error?.statusCode, error?.status, error?.response?.status];
+
+  for (const candidate of candidates) {
+    const parsed = Number(candidate);
+
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+function isRetryableUploadError(error) {
+  const statusCode = getErrorStatusCode(error);
+
+  if (RETRYABLE_UPLOAD_STATUS_CODES.has(statusCode)) {
+    return true;
+  }
+
+  const code = String(error?.code || error?.errno || "").toUpperCase();
+
+  if (RETRYABLE_UPLOAD_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = String(error?.message || "").toLowerCase();
+
+  return [
+    "econnreset",
+    "epipe",
+    "etimedout",
+    "enotfound",
+    "socket hang up",
+    "socket connection timeout",
+    "network timeout",
+    "network error",
+    "read timed out",
+    "write epipe",
+  ].some((fragment) => message.includes(fragment));
+}
+
+function getUploadRetryDelayMs(attempt) {
+  const baseDelayMs = 1000;
+  const maxDelayMs = 15000;
+  const exponentialDelay = baseDelayMs * 2 ** Math.max(attempt - 1, 0);
+  const jitter = Math.floor(Math.random() * 250);
+
+  return Math.min(exponentialDelay + jitter, maxDelayMs);
+}
+
+function shouldUseResumableUpload(entry) {
+  const minBytes = Number(appConfig.resumableUploadMinBytes) || 0;
+  const size = Number(entry?.size ?? entry?.buffer?.length ?? 0);
+
+  return size >= minBytes;
+}
+
+async function saveFileWithRetry(remoteFile, buffer, saveOptions, context = {}) {
+  const maxAttempts = Math.max(1, (Number(appConfig.uploadRetryLimit) || 0) + 1);
+  let attempt = 1;
+
+  while (attempt <= maxAttempts) {
+    try {
+      await remoteFile.save(buffer, saveOptions);
+      return attempt;
+    } catch (error) {
+      if (attempt >= maxAttempts || !isRetryableUploadError(error)) {
+        throw error;
+      }
+
+      const nextAttempt = attempt + 1;
+      const delayMs = getUploadRetryDelayMs(attempt);
+
+      if (typeof context.onRetry === "function") {
+        context.onRetry(error, nextAttempt, maxAttempts, delayMs);
+      }
+
+      await wait(delayMs);
+      attempt = nextAttempt;
+    }
+  }
+
+  return attempt;
+}
+
 function resolveUploadConcurrency(totalItems, override) {
   const configured = Number(override || appConfig.uploadConcurrency || 1);
   const safeConfigured = Number.isFinite(configured) ? configured : 1;
@@ -278,6 +388,7 @@ async function createFolder(folderName) {
     .file(`${effectiveFolder}/`)
     .save("", {
       resumable: false,
+      timeout: appConfig.uploadTimeoutMs,
       contentType: "application/x-directory",
     });
 
@@ -348,8 +459,9 @@ async function uploadPreparedImages(entries, folder, options = {}) {
 
     reportStep("uploading", `Enviando imagem ${itemPosition} de ${totalItems} para o storage.`);
 
-    await remoteFile.save(processedEntry.buffer, {
-      resumable: false,
+    const useResumableUpload = shouldUseResumableUpload(processedEntry);
+    const saveOptions = {
+      resumable: useResumableUpload,
       contentType: processedEntry.mimetype,
       metadata: {
         cacheControl: "public, max-age=31536000",
@@ -364,7 +476,29 @@ async function uploadPreparedImages(entries, folder, options = {}) {
           ...processedEntry.customMetadata,
         },
       },
+    };
+
+    if (!useResumableUpload) {
+      saveOptions.timeout = appConfig.uploadTimeoutMs;
+    }
+
+    const uploadAttempt = await saveFileWithRetry(remoteFile, processedEntry.buffer, saveOptions, {
+      onRetry: (error, nextAttempt, maxAttempts) => {
+        reportStep(
+          "uploading",
+          `Conexao interrompida ao enviar imagem ${itemPosition}; tentando novamente (${nextAttempt}/${maxAttempts}).`
+        );
+        warnings.push(
+          `Retry no upload de ${processedEntry.sourceOriginalName || processedEntry.originalname}: ${error.message}`
+        );
+      },
     });
+
+    if (uploadAttempt > 1) {
+      warnings.push(
+        `A imagem ${processedEntry.sourceOriginalName || processedEntry.originalname} foi enviada apos ${uploadAttempt} tentativa(s).`
+      );
+    }
 
     if (appConfig.makePublic && appConfig.urlMode === "public") {
       try {

@@ -132,6 +132,10 @@ GCS_URL_MODE=public
 GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/mktplacealpha
 GCS_MAKE_PUBLIC=false
 GCS_DEFAULT_PREFIX=produtos
+UPLOAD_CONCURRENCY=3
+GCS_UPLOAD_TIMEOUT_MS=0
+GCS_UPLOAD_RETRY_LIMIT=5
+GCS_RESUMABLE_UPLOAD_MIN_MB=0
 VTEX_ACCOUNT_NAME=alphabeto
 VTEX_API_BASE_URL=https://alphabeto.vtexcommercestable.com.br
 VTEX_API_APP_KEY=preencher
@@ -221,12 +225,17 @@ GCS_SIGNED_URL_DAYS=7
 GCS_DEFAULT_PREFIX=produtos
 MAX_FILES_PER_UPLOAD=10000
 MAX_FILE_SIZE_MB=20
+UPLOAD_CONCURRENCY=3
+GCS_UPLOAD_TIMEOUT_MS=0
+GCS_UPLOAD_RETRY_LIMIT=5
+GCS_RESUMABLE_UPLOAD_MIN_MB=0
 VTEX_ACCOUNT_NAME=alphabeto
 VTEX_API_BASE_URL=https://alphabeto.vtexcommercestable.com.br
 VTEX_API_APP_KEY=preencher
 VTEX_API_APP_TOKEN=preencher
 VTEX_MAX_EXPORT_SKUS=
 VTEX_REQUEST_CONCURRENCY=6
+VTEX_REQUEST_RETRY_LIMIT=3
 ```
 
 Nao precisa fixar `PORT` na hospedagem se a plataforma ja preencher automaticamente.
@@ -262,6 +271,38 @@ Start Command: npm start
 - O upload de uma imagem pequena funciona.
 - O link gerado abre em aba anonima.
 - A busca por SKU da VTEX funciona depois de preencher `VTEX_API_APP_KEY` e `VTEX_API_APP_TOKEN`.
+
+## Timeout de upload para o Google Cloud Storage
+
+- `UPLOAD_CONCURRENCY=3` permite comprimir/enviar imagens em paralelo sem abrir conexoes demais contra o Google Cloud Storage.
+- `GCS_UPLOAD_TIMEOUT_MS=0` remove o timeout artificial das chamadas do cliente do Google Cloud Storage. Esta e a configuracao recomendada para rodar localmente quando uploads grandes ou internet instavel causarem erro `read ETIMEDOUT`.
+- Se quiser voltar a ter limite por requisicao, use um valor em milissegundos, por exemplo `GCS_UPLOAD_TIMEOUT_MS=300000` para 5 minutos.
+- `GCS_UPLOAD_RETRY_LIMIT=5` tenta reenviar automaticamente uma imagem quando a conexao quebra com erros transitorios como `write EPIPE`, `read ETIMEDOUT`, `ECONNRESET`, `ENOTFOUND`, HTTP 429 ou HTTP 5xx.
+- `GCS_RESUMABLE_UPLOAD_MIN_MB=0` faz as imagens usarem upload resumable em vez de multipart. Isso evita abortar a importacao inteira por causa de uma conexao quebrada no meio do envio.
+- `VTEX_REQUEST_RETRY_LIMIT=3` aplica retry nas consultas e downloads da VTEX antes de desistir de uma imagem.
+- Em hospedagem, essa variavel nao remove limites da propria plataforma. Netlify Functions, Vercel Functions e similares ainda podem encerrar a execucao por limite externo mesmo com timeout do GCS desabilitado.
+
+## Importacao grande por SKU
+
+Para listas grandes, prefira o script de terminal em vez de deixar uma chamada HTTP aberta pela tela:
+
+```bash
+node scripts/import-vtex-skus.js \
+  --prefix inverno25novos \
+  --skus-file docs/imports/inverno25novos-skus.txt \
+  --out docs/imports/inverno25novos-resultado.json \
+  --csv-out docs/imports/inverno25novos-links.csv
+```
+
+O script consulta a VTEX, baixa as imagens, comprime conforme a configuracao atual, envia para o Google Cloud Storage e salva um JSON com resumo/avisos mais um CSV com os links finais. Ao reexecutar, ele lista a pasta de destino e pula imagens da VTEX que ja tenham metadados equivalentes no bucket; use `--resume=false` apenas se quiser forcar um novo envio completo. O JSON e o CSV finais filtram a pasta pelo conjunto atual de imagens retornadas pela VTEX e deduplicam por metadados, sem apagar objetos antigos do bucket.
+
+Registro de 2026-06-10:
+
+- Lista salva em `docs/imports/inverno25novos-skus.txt` com 485 SKUs.
+- Importacao para `inverno25novos` concluiu com 2.099 imagens da VTEX exportadas para os 485 SKUs e 0 avisos.
+- Resultado final salvo em `docs/imports/inverno25novos-resultado.json`; CSV limpo salvo em `docs/imports/inverno25novos-links.csv`.
+- A pasta `inverno25novos` tinha 2.954 objetos no bucket no fechamento, incluindo objetos antigos/duplicados; o CSV final usa somente as 2.099 imagens correspondentes a lista atual da VTEX.
+- As alteracoes de retry, upload resumable, script de importacao e artefatos foram preparadas para publicacao no branch `main`, que alimenta o projeto em producao.
 
 ## Riscos e proximos passos
 

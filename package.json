@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node -e \"console.log('No frontend build step required for Netlify')\"",
     "dev": "node src/server.js",
+    "import:vtex-skus": "node scripts/import-vtex-skus.js",
     "start": "node src/server.js"
   },
   "keywords": [
