@@ -8,7 +8,7 @@ function readEnv(name, fallback = "") {
   const netlifyValue =
     typeof netlifyEnv?.get === "function" ? netlifyEnv.get(name) : undefined;
 
-  if (netlifyValue !== undefined && netlifyValue !== null) {
+  if (netlifyValue !== undefined && netlifyValue !== null && netlifyValue !== "") {
     return netlifyValue;
   }
 

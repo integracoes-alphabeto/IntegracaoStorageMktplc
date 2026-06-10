@@ -103,6 +103,7 @@ O projeto agora possui uma primeira adaptacao para Netlify:
 - `netlify/functions/api.mts` empacota o Express atual com `serverless-http`.
 - `serverless-http` e `@netlify/functions` foram adicionados nas dependencias.
 - `src/config.js` passa a preferir `Netlify.env.get(...)` quando estiver rodando em ambiente Netlify.
+- Para variaveis secretas, `src/config.js` volta para `process.env` quando `Netlify.env.get(...)` retornar vazio.
 
 Configuracao esperada no Netlify:
 
@@ -131,6 +132,13 @@ VTEX_API_APP_TOKEN=preencher
 ```
 
 Observacao importante: esta adaptacao permite publicar e testar na Netlify, mas uploads grandes continuam sujeitos aos limites de Functions. Se a operacao real envolver muitos arquivos por lote, manter API em servidor Node sempre ligado continua sendo o caminho mais robusto.
+
+Validacao do deploy Netlify:
+
+- A primeira publicacao subiu a pagina estatica, mas a Function retornou 502 por causa do bundle com `createRequire(import.meta.url)`.
+- A Function foi corrigida para importar o servidor Express via ESM.
+- Em seguida, a API respondeu, mas `authEnabled` e `vtexEnabled` ficaram falsos porque variaveis secretas podem chegar vazias via `Netlify.env.get(...)`.
+- O helper de ambiente foi ajustado para usar `process.env` como fallback quando isso acontecer.
 
 ### Minha escolha recomendada
 
